@@ -1,27 +1,34 @@
 import pygame
 
+# Initialize Pygame
 pygame.init()
-screen = pygame.display.set_mode((1200, 800))
+screen = pygame.display.set_mode((1200, 800), pygame.RESIZABLE)
 
-# Title and icone
+# Title and Icon
 pygame.display.set_caption("Bug Debugger")
 icone = pygame.image.load("virus.png")
 pygame.display.set_icon(icone)
 
-# Introdoction
+# Introduction
 IntroBack = pygame.image.load("Introback.png")
 IntroImg = pygame.image.load("search.png")
 Customsize = (256, 256)
 IntroImg = pygame.transform.scale(IntroImg, Customsize)
 IntroTxt = pygame.image.load("introdoc.png")
-# IntroTxt = pygame.transform.scale(IntroTxt, (512, 512))
 IntroX = 90
 IntroY = 395
 IntroTxtX = -800
 IntroTxtY = 75
 
+# First Level
+firstLevelImg = pygame.image.load('FirstLevelBack.jpg')
+firstLevel = False
+
 
 def FirstpageAnimation(x, y, z, n):
+    """
+    Displays the IntroImg and IntroTxt during the introduction phase.
+    """
     screen.blit(IntroImg, (x, y))
     screen.blit(IntroTxt, (z, n))
 
@@ -30,22 +37,34 @@ def FirstpageAnimation(x, y, z, n):
 running = True
 
 while running:
-
     # RGB - Red, Green, Blue, transparency
-    screen.fill((76, 0, 153, 0.6))
-    screen.blit(IntroBack, (0, 0))
+    if not firstLevel:
+        screen.fill((76, 0, 153, 0.6))  # Background color for intro
+        screen.blit(IntroBack, (0, 0))  # Intro background
 
-    if IntroX < 880:
-        IntroX += 4
-        IntroTxtX += 4
+        # Animate IntroImg and IntroTxt moving horizontally
+        if IntroX < 880:
+            IntroX += 88
+            IntroTxtX += 88
+        else:
+            IntroX += 0.0
+            IntroTxtX += 0.0
+
+        # Display IntroImg and IntroTxt
+        FirstpageAnimation(IntroX, IntroY, IntroTxtX, IntroTxtY)
     else:
-        IntroX += 0.0
-        IntroTxtX += 0.0
+        # First level background
+        screen.fill((76, 0, 153, 0.6))  # Background color for first level
+        # Display first level background
+        screen.blit(firstLevelImg, (-50, -250))
 
+    # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            # Transition to the first level
+            firstLevel = True
 
-    FirstpageAnimation(IntroX, IntroY, IntroTxtX, IntroTxtY)
-
+    # Update the display
     pygame.display.update()
