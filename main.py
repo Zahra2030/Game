@@ -24,6 +24,18 @@ IntroTxtY = 75
 firstLevelImg = pygame.image.load('FirstLevelBack.jpg')
 firstLevel = False
 
+mothImg = pygame.image.load("corn-borer.png")
+tweezersImg = pygame.image.load("tweezers.png")
+# tweezersImg = pygame.transform.scale(tweezersImg, (128, 128))
+# tweezersImg = pygame.transform.rotate(tweezersImg, 45)
+tweezersX = 600
+tweezersY = 800 - 150
+tweezersX_change = 0
+
+
+def tweezers(tweezersX, tweezersY):
+    screen.blit(tweezersImg, (tweezersX, tweezersY))
+
 
 def FirstpageAnimation(x, y, z, n):
     """
@@ -52,11 +64,12 @@ while running:
 
         # Display IntroImg and IntroTxt
         FirstpageAnimation(IntroX, IntroY, IntroTxtX, IntroTxtY)
-    else:
+    elif firstLevel:
         # First level background
         screen.fill((76, 0, 153, 0.6))  # Background color for first level
         # Display first level background
         screen.blit(firstLevelImg, (-50, -250))
+        tweezers(tweezersX, tweezersY)
 
     # Event handling
     for event in pygame.event.get():
@@ -65,6 +78,25 @@ while running:
         if event.type == pygame.KEYDOWN:
             # Transition to the first level
             firstLevel = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    print("Left arrow peressd")
+                    tweezersX_change = -2
+                if event.key == pygame.K_RIGHT:
+                    print("Right arrow peressd")
+                    tweezersX_change = 2
 
+        if event.type == pygame.KEYUP:
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    tweezersX_change = 0
+                    print("Up")
     # Update the display
+    # player boundris
+    tweezersX += tweezersX_change
+    if tweezersX <= 10:
+        tweezersX_change = 0
+    elif tweezersX >= 1050:
+        tweezersX_change = 0
+
     pygame.display.update()
