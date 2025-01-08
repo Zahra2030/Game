@@ -1,4 +1,6 @@
 import pygame
+import random
+import math
 
 # Initialize Pygame
 pygame.init()
@@ -21,20 +23,47 @@ IntroTxtX = -800
 IntroTxtY = 75
 
 # First Level
+# Background
 firstLevelImg = pygame.image.load('FirstLevelBack.jpg')
 firstLevel = False
+mothCatched = 0
 
+# Objs
+
+# Moth init
 mothImg = pygame.image.load("corn-borer.png")
-tweezersImg = pygame.image.load("tweezers.png")
-# tweezersImg = pygame.transform.scale(tweezersImg, (128, 128))
-# tweezersImg = pygame.transform.rotate(tweezersImg, 45)
+mothImg = pygame.transform.scale(mothImg, (98, 98))
+# mothImg = pygame.transform.rotate(mothImg, 180)
+MothX = random.randint(10, 1050)
+MothY = 150
+MothY_change = 0.8
+Moth_state = "Free"
+
+# Tweezer init
+tweezersImg = pygame.image.load("tweezer.png")
+tweezersImg = pygame.transform.scale(tweezersImg, (160, 160))
+
+
 tweezersX = 600
-tweezersY = 800 - 150
+tweezersY = 800 - 160
 tweezersX_change = 0
 
 
 def tweezers(tweezersX, tweezersY):
     screen.blit(tweezersImg, (tweezersX, tweezersY))
+
+
+def moth(MothX, MothY):
+    screen.blit(mothImg, (MothX, MothY))
+
+
+def isCatch(MothX, tweezersX, MothY, tweezersY):
+    distance = math.sqrt(pow((MothX - tweezersX), 2) +
+                         pow((MothY - tweezersY), 2))
+    if distance < 70:
+        return True
+    else:
+        return False
 
 
 def FirstpageAnimation(x, y, z, n):
@@ -70,6 +99,7 @@ while running:
         # Display first level background
         screen.blit(firstLevelImg, (-50, -250))
         tweezers(tweezersX, tweezersY)
+        moth(MothX, MothY)
 
     # Event handling
     for event in pygame.event.get():
@@ -92,11 +122,32 @@ while running:
                     tweezersX_change = 0
                     print("Up")
     # Update the display
+
+    MothY += MothY_change
+
     # player boundris
     tweezersX += tweezersX_change
     if tweezersX <= 10:
         tweezersX_change = 0
     elif tweezersX >= 1050:
         tweezersX_change = 0
+
+    if MothY <= 10:
+        MothY_change = 0.8
+        MothX = random.randint(10, 1050)
+    elif MothY >= 700:
+        MothY_change = 0
+        MothY = random.randint(5, 10)
+
+    if MothY > 0:
+        Moth_state = "Free"
+
+    IsCatch = isCatch(MothX, tweezersX, MothY, tweezersY)
+    if IsCatch:
+        MothY_change = 0
+        MothY = random.randint(4, 10)
+        Moth_state = "Catched"
+        mothCatched += 1
+        print(mothCatched)
 
     pygame.display.update()
