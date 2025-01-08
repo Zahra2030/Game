@@ -51,15 +51,7 @@ intro_txt_x = -800
 intro_txt_y = 75
 
 # Story content
-story_lines = [
-    "1947: A team of programmers faced a strange issue.",
-    "The computer was malfunctioning, calculations failing.",
-    "Finally, they opened the hardware...",
-    "...and found a moth trapped inside!",
-    "This moment marked the birth of the term 'debugging'.",
-    "Congratulations! You've carried on their legacy by debugging successfully."
-]
-story_font = pygame.font.Font(None, 36)
+firstStoryImg = pygame.image.load("firstlevelstory.png")
 
 
 def draw_tweezers(x, y):
@@ -85,11 +77,7 @@ def show_win():
 
 
 def display_story():
-    y_offset = 300
-    for line in story_lines:
-        story_render = story_font.render(line, True, (255, 255, 255))
-        screen.blit(story_render, (100, y_offset))
-        y_offset += 50
+    screen.blit(firstStoryImg, (-40, -50))
 
 
 def intro_animation():
@@ -108,13 +96,19 @@ while running:
         # Display the winning image for 5 seconds before showing the story
         if story_timer == 0:
             story_timer = time.time()
-        if time.time() - story_timer < 5:
+        if time.time() - story_timer < 1:
+            screen.blit(first_level_img, (-50, -250))
             show_win()
+
         else:
             display_story()
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     story_shown = True
+    elif lose:
+        screen.blit(first_level_img, (-50, -250))
+        show_lose()
+
     elif not first_level:
         # Intro screen
         screen.blit(intro_back, (0, 0))  # Intro background
@@ -129,7 +123,7 @@ while running:
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 first_level = True
-    else:
+    elif first_level:
         # First level screen
         screen.blit(first_level_img, (-50, -250))
 
@@ -151,7 +145,6 @@ while running:
 
         if debug_chance < 0:
             lose = True
-            show_lose()
 
         if moth_caught >= 10:
             win = True
