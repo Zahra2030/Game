@@ -51,7 +51,10 @@ intro_txt_x = -800
 intro_txt_y = 75
 
 # Story content
-firstStoryImg = pygame.image.load("firstlevelstory.png")
+firstStory_BackImg = pygame.image.load("firstlevelstory.png")
+firstStory_TxtImg = pygame.image.load("firstlevelstoryTxt.png")
+firstStory_TxtImg_Y = -750
+firstStory_TxtImg_Ychange = 15
 
 
 def draw_tweezers(x, y):
@@ -77,7 +80,13 @@ def show_win():
 
 
 def display_story():
-    screen.blit(firstStoryImg, (-40, -50))
+    global firstStory_TxtImg_Y
+    global firstStory_TxtImg_Ychange
+
+    screen.blit(firstStory_BackImg, (-18, -18))
+    screen.blit(firstStory_TxtImg, (5, firstStory_TxtImg_Y))
+    if firstStory_TxtImg_Y < 20:
+        firstStory_TxtImg_Y += firstStory_TxtImg_Ychange
 
 
 def intro_animation():
@@ -92,14 +101,35 @@ running = True
 while running:
     screen.fill((76, 0, 153))  # Background color
 
+    # Event handling
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False  # break the loop
+            pygame.quit()
+            sys.exit()
+            quit()
+
+        if event.type == pygame.KEYDOWN:
+            first_level = True
+            if event.key == pygame.K_LEFT:
+                tweezers_x_change = -2
+            if event.key == pygame.K_RIGHT:
+                tweezers_x_change = 2
+            if event.key == pygame.K_f:
+                screen = pygame.display.set_mode(
+                    (1200, 800), pygame.FULLSCREEN)
+
+        if event.type == pygame.KEYUP:
+            if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                tweezers_x_change = 0
+
     if win and not story_shown:
         # Display the winning image for 5 seconds before showing the story
         if story_timer == 0:
             story_timer = time.time()
-        if time.time() - story_timer < 1:
+        if time.time() - story_timer < 2:
             screen.blit(first_level_img, (-50, -250))
             show_win()
-
         else:
             display_story()
             for event in pygame.event.get():
@@ -108,6 +138,10 @@ while running:
     elif lose:
         screen.blit(first_level_img, (-50, -250))
         show_lose()
+        first_level = False
+        lose = False
+        debug_chance = 5
+        moth_caught = 0
 
     elif not first_level:
         # Intro screen
@@ -119,10 +153,6 @@ while running:
             intro_txt_x += 8
         intro_animation()
 
-        # Start the first level with a key press
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                first_level = True
     elif first_level:
         # First level screen
         screen.blit(first_level_img, (-50, -250))
@@ -154,21 +184,6 @@ while running:
             moth_y = random.randint(5, 10)
             moth_x = random.randint(10, 1050)
             moth_caught += 1
-
-    # Event handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                tweezers_x_change = -2
-            if event.key == pygame.K_RIGHT:
-                tweezers_x_change = 2
-
-        if event.type == pygame.KEYUP:
-            if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
-                tweezers_x_change = 0
 
     pygame.display.update()
 
