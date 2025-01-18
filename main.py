@@ -12,14 +12,20 @@ pygame.display.set_caption("Bug Debugger")
 icon = pygame.image.load("virus.png")
 pygame.display.set_icon(icon)
 
+# Game states
+INTRO = 0
+FIRST_LEVEL = 1
+SHOWING_firstSTORY = 2
+SECOND_LEVEL = 3
+WINNING_NOTIF = 4
+LOSING_NOTIF = 5
+current_state = INTRO
+
 # Game variables
 debug_chance = 5
 moth_caught = 0
-first_level = False
-lose = False
-win = False
-story_shown = False
 story_timer = 0
+reset = True
 
 # Images
 losing_img = pygame.image.load("game-over.png")
@@ -33,6 +39,28 @@ moth_img = pygame.image.load("corn-borer.png")
 moth_img = pygame.transform.scale(moth_img, (98, 98))
 tweezers_img = pygame.image.load("tweezer.png")
 tweezers_img = pygame.transform.scale(tweezers_img, (160, 160))
+
+# First level story images
+firstStory_BackImg = pygame.image.load("firstlevelstory.png")
+firstStory_TxtImg = pygame.image.load("firstlevelstoryTxt.png")
+firstStory_TxtImg_Y = -750
+firstStory_TxtImg_Ychange = 15
+
+# Second level images
+background = pygame.image.load('SecondLevel.png')
+background = pygame.transform.scale(background, (1565, 815))
+state_one = pygame.image.load('Clear.png')  # State 1: Clear
+state_one = pygame.transform.scale(state_one, (80, 80))
+state_two = pygame.image.load('manipulated.png')  # State 2: Manipulated
+state_two = pygame.transform.scale(state_two, (80, 80))
+state_three = pygame.image.load('Isolated.png')  # State 3: Isolated
+state_three = pygame.transform.scale(state_three, (80, 80))
+
+# Node positions and states for the second level
+nodesX = [515, 735, 975]
+nodesY = [145, 380, 625]
+pc_states = [1, 2, 3]  # 1 = Clear, 2 = Manipulated, 3 = Isolated
+fixed_states = []
 
 # Moth variables
 moth_x = random.randint(10, 1050)
@@ -49,12 +77,6 @@ intro_x = 90
 intro_y = 395
 intro_txt_x = -800
 intro_txt_y = 75
-
-# Story content
-firstStory_BackImg = pygame.image.load("firstlevelstory.png")
-firstStory_TxtImg = pygame.image.load("firstlevelstoryTxt.png")
-firstStory_TxtImg_Y = -750
-firstStory_TxtImg_Ychange = 15
 
 
 def draw_tweezers(x, y):
@@ -81,8 +103,6 @@ def show_win():
 
 def display_story():
     global firstStory_TxtImg_Y
-    global firstStory_TxtImg_Ychange
-
     screen.blit(firstStory_BackImg, (-18, -18))
     screen.blit(firstStory_TxtImg, (5, firstStory_TxtImg_Y))
     if firstStory_TxtImg_Y < 20:
@@ -90,100 +110,134 @@ def display_story():
 
 
 def intro_animation():
-    """Animates the introduction elements."""
     global intro_x, intro_txt_x
     screen.blit(intro_img, (intro_x, intro_y))
     screen.blit(intro_txt, (intro_txt_x, intro_txt_y))
+    if intro_x < 880:
+        intro_x += 8
+        intro_txt_x += 8
 
 
-# Game loop
+def initialize_nodes():
+    global fixed_states
+    fixed_states = [
+        [nodesX[i], nodesY[j], random.choice(pc_states[:2])]
+        for i in range(len(nodesX)) for j in range(len(nodesY))
+    ]
+
+
+def draw_nodes():
+    for objX, objY, state in fixed_states:
+        if state == 1:
+            screen.blit(state_one, (objX, objY))
+        elif state == 2:
+            screen.blit(state_two, (objX, objY))
+        elif state == 3:
+            screen.blit(state_three, (objX, objY))
+
+
+def is_click_on_pc(x, y, objX, objY):
+    pc_width, pc_height = state_one.get_size()
+    return objX <= x <= objX + pc_width and objY <= y <= objY + pc_height
+
+
+def isolate(x, y):
+    for node in fixed_states:
+        objX, objY, state = node
+        if is_click_on_pc(x, y, objX, objY) and state == 1:
+            node[2] = 3
+            break
+
+
+def clear(x, y):
+    for node in fixed_states:
+        objX, objY, state = node
+        if is_click_on_pc(x, y, objX, objY) and state == 2:
+            node[2] = 1
+            break
+
+
+# Main game loop
 running = True
 while running:
-    screen.fill((76, 0, 153))  # Background color
+    screen.fill((76, 0, 153))
 
-    # Event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False  # break the loop
-            pygame.quit()
-            sys.exit()
-            quit()
+            running = False
 
         if event.type == pygame.KEYDOWN:
-            first_level = True
-            if event.key == pygame.K_LEFT:
-                tweezers_x_change = -2
-            if event.key == pygame.K_RIGHT:
-                tweezers_x_change = 2
-            if event.key == pygame.K_f:
-                screen = pygame.display.set_mode(
-                    (1200, 800), pygame.FULLSCREEN)
+            if current_state == INTRO:
+                current_state = FIRST_LEVEL
+            elif current_state == SHOWING_firstSTORY:
+                current_state = SECOND_LEVEL
+            elif current_state == FIRST_LEVEL:
+                if event.key == pygame.K_LEFT:
+                    tweezers_x_change = -2
+                elif event.key == pygame.K_RIGHT:
+                    tweezers_x_change = 2
 
-        if event.type == pygame.KEYUP:
+        if event.type == pygame.KEYUP and current_state == FIRST_LEVEL:
             if event.key in (pygame.K_LEFT, pygame.K_RIGHT):
                 tweezers_x_change = 0
 
-    if win and not story_shown:
-        # Display the winning image for 5 seconds before showing the story
-        if story_timer == 0:
-            story_timer = time.time()
-        if time.time() - story_timer < 2:
-            screen.blit(first_level_img, (-50, -250))
-            show_win()
-        else:
-            display_story()
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    story_shown = True
-    elif lose:
-        screen.blit(first_level_img, (-50, -250))
-        show_lose()
-        first_level = False
-        lose = False
-        debug_chance = 5
-        moth_caught = 0
+        if event.type == pygame.MOUSEBUTTONDOWN and current_state == SECOND_LEVEL:
+            x, y = event.pos
+            if event.button == 1:
+                isolate(x, y)
+            elif event.button == 3:
+                clear(x, y)
 
-    elif not first_level:
-        # Intro screen
-        screen.blit(intro_back, (0, 0))  # Intro background
-
-        # Animate intro elements
-        if intro_x < 880:
-            intro_x += 8
-            intro_txt_x += 8
+    if current_state == INTRO:
+        screen.blit(intro_back, (0, 0))
         intro_animation()
 
-    elif first_level:
-        # First level screen
+    elif current_state == FIRST_LEVEL:
         screen.blit(first_level_img, (-50, -250))
-
-        # Draw objects
         draw_tweezers(tweezers_x, tweezers_y)
         draw_moth(moth_x, moth_y)
-
-        # Move moth
-        moth_y += moth_y_change
-
-        # Boundary checks
         tweezers_x += tweezers_x_change
-        tweezers_x = max(10, min(tweezers_x, 1050))
-
+        moth_y += moth_y_change
         if moth_y >= 700:
             moth_y = random.randint(5, 10)
             moth_x = random.randint(10, 1050)
             debug_chance -= 1
-
         if debug_chance < 0:
-            lose = True
-
+            current_state = LOSING_NOTIF
         if moth_caught >= 10:
-            win = True
-
-        # Collision detection
+            current_state = WINNING_NOTIF
         if check_collision(moth_x, moth_y, tweezers_x, tweezers_y):
             moth_y = random.randint(5, 10)
             moth_x = random.randint(10, 1050)
             moth_caught += 1
+
+    elif current_state == SHOWING_firstSTORY:
+        display_story()
+
+    elif current_state == SECOND_LEVEL:
+        if reset:
+            initialize_nodes()
+            reset = False
+        screen.blit(background, (-15, -5))
+        draw_nodes()
+
+    elif current_state == WINNING_NOTIF:
+        if story_timer == 0:
+            story_timer = time.time()
+        if time.time() - story_timer < 3:
+            show_win()
+        else:
+            current_state = SHOWING_firstSTORY
+
+    elif current_state == LOSING_NOTIF:
+        if story_timer == 0:
+            story_timer = time.time()
+        if time.time() - story_timer < 3:
+            show_lose()
+        else:
+            current_state = INTRO
+            debug_chance = 5
+            moth_caught = 0
 
     pygame.display.update()
 
