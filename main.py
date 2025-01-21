@@ -17,8 +17,9 @@ INTRO = 0
 FIRST_LEVEL = 1
 SHOWING_firstSTORY = 2
 SECOND_LEVEL = 3
-WINNING_NOTIF = 4
-LOSING_NOTIF = 5
+SHOWING_secondSTORY = 4
+WINNING_NOTIF = 5
+LOSING_NOTIF = 6
 current_state = INTRO
 
 # Game variables
@@ -46,6 +47,12 @@ firstStory_TxtImg = pygame.image.load("firstlevelstoryTxt.png")
 firstStory_TxtImg_Y = -750
 firstStory_TxtImg_Ychange = 15
 
+# Second level story images
+secondStory_BackImg = pygame.image.load("secondlevelstory.png")
+secondStory_TxtImg = pygame.image.load("secondlevelstoryTxt.png")
+secondStory_TxtImg_Y = -750
+secondStory_TxtImg_Ychange = 15
+
 # Second level images
 background = pygame.image.load('SecondLevel.png')
 background = pygame.transform.scale(background, (1565, 815))
@@ -59,7 +66,7 @@ state_three = pygame.transform.scale(state_three, (80, 80))
 # Node positions and states for the second level
 nodesX = [515, 735, 975]
 nodesY = [145, 380, 625]
-pc_states = [1, 2, 3]  # 1 = Clear, 2 = Manipulated, 3 = Isolated
+pc_states = [1, 2]  # 1 = Clear, 2 = Manipulated
 fixed_states = []
 
 # Moth variables
@@ -78,28 +85,27 @@ intro_y = 395
 intro_txt_x = -800
 intro_txt_y = 75
 
+# Game variables for the second level
+start_time = 0
+max_time = 15  # seconds
+manipulated_count = 0
 
 def draw_tweezers(x, y):
     screen.blit(tweezers_img, (x, y))
 
-
 def draw_moth(x, y):
     screen.blit(moth_img, (x, y))
-
 
 def check_collision(moth_x, moth_y, tweezers_x, tweezers_y):
     distance = math.sqrt(pow((moth_x - tweezers_x), 2) +
                          pow((moth_y - tweezers_y), 2))
     return distance < 70
 
-
 def show_lose():
     screen.blit(losing_img, (100, 200))
 
-
 def show_win():
     screen.blit(winning_img, (100, 200))
-
 
 def display_story():
     global firstStory_TxtImg_Y
@@ -108,6 +114,12 @@ def display_story():
     if firstStory_TxtImg_Y < 20:
         firstStory_TxtImg_Y += firstStory_TxtImg_Ychange
 
+def display_second_story():
+    global secondStory_TxtImg_Y
+    screen.blit(secondStory_BackImg, (-18, -18))
+    screen.blit(secondStory_TxtImg, (5, secondStory_TxtImg_Y))
+    if secondStory_TxtImg_Y < 20:
+        secondStory_TxtImg_Y += secondStory_TxtImg_Ychange
 
 def intro_animation():
     global intro_x, intro_txt_x
@@ -117,14 +129,12 @@ def intro_animation():
         intro_x += 8
         intro_txt_x += 8
 
-
 def initialize_nodes():
     global fixed_states
     fixed_states = [
-        [nodesX[i], nodesY[j], random.choice(pc_states[:2])]
+        [nodesX[i], nodesY[j], 1]  # Initialize all nodes to Clear state
         for i in range(len(nodesX)) for j in range(len(nodesY))
     ]
-
 
 def draw_nodes():
     for objX, objY, state in fixed_states:
@@ -135,11 +145,9 @@ def draw_nodes():
         elif state == 3:
             screen.blit(state_three, (objX, objY))
 
-
 def is_click_on_pc(x, y, objX, objY):
     pc_width, pc_height = state_one.get_size()
     return objX <= x <= objX + pc_width and objY <= y <= objY + pc_height
-
 
 def isolate(x, y):
     for node in fixed_states:
@@ -148,7 +156,6 @@ def isolate(x, y):
             node[2] = 3
             break
 
-
 def clear(x, y):
     for node in fixed_states:
         objX, objY, state = node
@@ -156,6 +163,34 @@ def clear(x, y):
             node[2] = 1
             break
 
+def secure():
+    global current_state, reset, manipulated_count, start_time
+    isolated_count = sum(1 for _, _, state in fixed_states if state == 3)
+    manipulated_count = sum(1 for _, _, state in fixed_states if state == 2)
+
+    # Check if all PCs are isolated
+    if isolated_count == len(fixed_states):
+        current_state = WINNING_NOTIF
+        reset = True
+        return
+
+    # Check if manipulated PCs exceed the threshold
+    if manipulated_count >= 8:
+        current_state = LOSING_NOTIF
+        reset = True
+        return
+
+    # Timer-based infection
+    if time.time() - start_time >= max_time:
+        infect_pc()
+        start_time = time.time()  # Reset infection timer
+
+def infect_pc():
+    """Randomly infect a clear PC by changing its state to manipulated."""
+    clear_nodes = [node for node in fixed_states if node[2] == 1]  # Find clear PCs
+    if clear_nodes:
+        infected_node = random.choice(clear_nodes)
+        infected_node[2] = 2  # Change to manipulated state
 
 # Main game loop
 running = True
@@ -171,6 +206,9 @@ while running:
                 current_state = FIRST_LEVEL
             elif current_state == SHOWING_firstSTORY:
                 current_state = SECOND_LEVEL
+                start_time = time.time()  # Start the timer for the second level
+            elif current_state == SHOWING_secondSTORY:
+                current_state = INTRO
             elif current_state == FIRST_LEVEL:
                 if event.key == pygame.K_LEFT:
                     tweezers_x_change = -2
@@ -205,7 +243,7 @@ while running:
         if debug_chance < 0:
             current_state = LOSING_NOTIF
         if moth_caught >= 10:
-            current_state = WINNING_NOTIF
+            current_state = SHOWING_firstSTORY
         if check_collision(moth_x, moth_y, tweezers_x, tweezers_y):
             moth_y = random.randint(5, 10)
             moth_x = random.randint(10, 1050)
@@ -213,31 +251,52 @@ while running:
 
     elif current_state == SHOWING_firstSTORY:
         display_story()
+        if firstStory_TxtImg_Y >= 20:
+            if story_timer == 0:
+                story_timer = time.time()
+            if time.time() - story_timer > 2:  # Wait 2 seconds before transitioning
+                current_state = SECOND_LEVEL
+                story_timer = 0
 
     elif current_state == SECOND_LEVEL:
         if reset:
             initialize_nodes()
             reset = False
+            start_time = time.time()  # Restart the timer when resetting the level
+
         screen.blit(background, (-15, -5))
         draw_nodes()
+        secure()
+
+    elif current_state == SHOWING_secondSTORY:
+        display_second_story()
+        if secondStory_TxtImg_Y >= 20:  # Ensure the player has seen the second story
+            if story_timer == 0:
+                story_timer = time.time()
+            if time.time() - story_timer > 2:  # Wait 2 seconds before transitioning
+                current_state = INTRO  # Return to intro or next planned state
+                story_timer = 0  # Reset timer
 
     elif current_state == WINNING_NOTIF:
         if story_timer == 0:
             story_timer = time.time()
         if time.time() - story_timer < 3:
+            screen.blit(first_level_img, (-50, -250))  # Show first level background
             show_win()
         else:
-            current_state = SHOWING_firstSTORY
+            current_state = SHOWING_secondSTORY
 
     elif current_state == LOSING_NOTIF:
         if story_timer == 0:
             story_timer = time.time()
         if time.time() - story_timer < 3:
+            screen.blit(first_level_img, (-50, -250))  # Show first level background
             show_lose()
         else:
             current_state = INTRO
             debug_chance = 5
             moth_caught = 0
+            manipulated_count = 0
 
     pygame.display.update()
 
