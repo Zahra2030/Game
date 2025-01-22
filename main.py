@@ -7,6 +7,10 @@ import time
 pygame.init()
 screen = pygame.display.set_mode((1200, 800), pygame.RESIZABLE)
 
+# Init Pygame sounds
+pygame.mixer.init()
+
+
 # Title and Icon
 pygame.display.set_caption("Bug Debugger")
 icon = pygame.image.load("virus.png")
@@ -27,6 +31,29 @@ debug_chance = 5
 moth_caught = 0
 story_timer = 0
 reset = True
+intro_timer = 0
+notif_timer = 0
+# Game sounds
+sounds = {
+    "intro": pygame.mixer.Sound("sounds/intro_prompt.wav"),
+    "bug_catch": pygame.mixer.Sound("sounds/bug_catch.wav"),
+    "bug_escape": pygame.mixer.Sound("sounds/bug_escape.wav"),
+    "win": pygame.mixer.Sound("sounds/win_chime.wav"),
+    "lose": pygame.mixer.Sound("sounds/lose_descend.wav"),
+    "node_click": pygame.mixer.Sound("sounds/node_click.wav"),
+    "node_error": pygame.mixer.Sound("sounds/node_error.wav"),
+    "transition": pygame.mixer.Sound("sounds/transition_whoosh.wav"),
+}
+# Sound adjustment
+sounds["intro"].set_volume(0.8)
+sounds["bug_catch"].set_volume(0.7)
+sounds["bug_escape"].set_volume(0.7)
+sounds["win"].set_volume(0.9)
+sounds["lose"].set_volume(0.8)
+sounds["node_click"].set_volume(0.6)
+sounds["node_error"].set_volume(0.6)
+sounds["transition"].set_volume(0.7)
+
 
 # Images
 losing_img = pygame.image.load("game-over.png")
@@ -49,9 +76,10 @@ firstStory_TxtImg_Ychange = 15
 
 # Second level story images
 secondStory_BackImg = pygame.image.load("secondlevelstory.png")
+secondStory_BackImg = pygame.transform.scale(secondStory_BackImg, (1565, 825))
 secondStory_TxtImg = pygame.image.load("secondlevelstoryTxt.png")
-secondStory_TxtImg_Y = -750
-secondStory_TxtImg_Ychange = 15
+secondStory_alpha = 0
+alpha_increment = 2
 
 # Second level images
 background = pygame.image.load('SecondLevel.png')
@@ -90,22 +118,28 @@ start_time = 0
 max_time = 15  # seconds
 manipulated_count = 0
 
+
 def draw_tweezers(x, y):
     screen.blit(tweezers_img, (x, y))
 
+
 def draw_moth(x, y):
     screen.blit(moth_img, (x, y))
+
 
 def check_collision(moth_x, moth_y, tweezers_x, tweezers_y):
     distance = math.sqrt(pow((moth_x - tweezers_x), 2) +
                          pow((moth_y - tweezers_y), 2))
     return distance < 70
 
+
 def show_lose():
     screen.blit(losing_img, (100, 200))
 
+
 def show_win():
     screen.blit(winning_img, (100, 200))
+
 
 def display_story():
     global firstStory_TxtImg_Y
@@ -114,12 +148,14 @@ def display_story():
     if firstStory_TxtImg_Y < 20:
         firstStory_TxtImg_Y += firstStory_TxtImg_Ychange
 
+
 def display_second_story():
-    global secondStory_TxtImg_Y
-    screen.blit(secondStory_BackImg, (-18, -18))
-    screen.blit(secondStory_TxtImg, (5, secondStory_TxtImg_Y))
-    if secondStory_TxtImg_Y < 20:
-        secondStory_TxtImg_Y += secondStory_TxtImg_Ychange
+    global secondStory_alpha
+    secondStory_alpha = min(255, secondStory_alpha + alpha_increment)
+    secondStory_TxtImg.set_alpha(secondStory_alpha)
+    screen.blit(secondStory_BackImg, (-18, -8))
+    screen.blit(secondStory_TxtImg, (1075, 24))
+
 
 def intro_animation():
     global intro_x, intro_txt_x
@@ -129,12 +165,15 @@ def intro_animation():
         intro_x += 8
         intro_txt_x += 8
 
+
 def initialize_nodes():
     global fixed_states
     fixed_states = [
-        [nodesX[i], nodesY[j], 1]  # Initialize all nodes to Clear state
+        # Initialize nodes with random states
+        [nodesX[i], nodesY[j], random.choice([1, 2])]
         for i in range(len(nodesX)) for j in range(len(nodesY))
     ]
+
 
 def draw_nodes():
     for objX, objY, state in fixed_states:
@@ -145,9 +184,11 @@ def draw_nodes():
         elif state == 3:
             screen.blit(state_three, (objX, objY))
 
+
 def is_click_on_pc(x, y, objX, objY):
     pc_width, pc_height = state_one.get_size()
     return objX <= x <= objX + pc_width and objY <= y <= objY + pc_height
+
 
 def isolate(x, y):
     for node in fixed_states:
@@ -156,12 +197,14 @@ def isolate(x, y):
             node[2] = 3
             break
 
+
 def clear(x, y):
     for node in fixed_states:
         objX, objY, state = node
         if is_click_on_pc(x, y, objX, objY) and state == 2:
             node[2] = 1
             break
+
 
 def secure():
     global current_state, reset, manipulated_count, start_time
@@ -185,12 +228,15 @@ def secure():
         infect_pc()
         start_time = time.time()  # Reset infection timer
 
+
 def infect_pc():
     """Randomly infect a clear PC by changing its state to manipulated."""
-    clear_nodes = [node for node in fixed_states if node[2] == 1]  # Find clear PCs
+    clear_nodes = [node for node in fixed_states if node[2]
+                   == 1]  # Find clear PCs
     if clear_nodes:
         infected_node = random.choice(clear_nodes)
         infected_node[2] = 2  # Change to manipulated state
+
 
 # Main game loop
 running = True
@@ -205,6 +251,7 @@ while running:
             if current_state == INTRO:
                 current_state = FIRST_LEVEL
             elif current_state == SHOWING_firstSTORY:
+                sounds["transition"].play()
                 current_state = SECOND_LEVEL
                 start_time = time.time()  # Start the timer for the second level
             elif current_state == SHOWING_secondSTORY:
@@ -222,13 +269,18 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN and current_state == SECOND_LEVEL:
             x, y = event.pos
             if event.button == 1:
+                sounds["node_click"].play()  # Play sound for left-click
                 isolate(x, y)
             elif event.button == 3:
+                sounds["node_error"].play()  # Play sound for right-click
                 clear(x, y)
 
     if current_state == INTRO:
         screen.blit(intro_back, (0, 0))
         intro_animation()
+        if intro_timer == 0:  # Play intro sound once
+            sounds["intro"].play()
+            intro_timer = 1
 
     elif current_state == FIRST_LEVEL:
         screen.blit(first_level_img, (-50, -250))
@@ -236,15 +288,18 @@ while running:
         draw_moth(moth_x, moth_y)
         tweezers_x += tweezers_x_change
         moth_y += moth_y_change
-        if moth_y >= 700:
+        if moth_y >= 750:
+            sounds["bug_escape"].play()  # Play bug-escaping sound
             moth_y = random.randint(5, 10)
             moth_x = random.randint(10, 1050)
             debug_chance -= 1
         if debug_chance < 0:
             current_state = LOSING_NOTIF
+            notif_timer = time.time()
         if moth_caught >= 10:
             current_state = SHOWING_firstSTORY
         if check_collision(moth_x, moth_y, tweezers_x, tweezers_y):
+            sounds["bug_catch"].play()  # Play bug-catching sound
             moth_y = random.randint(5, 10)
             moth_x = random.randint(10, 1050)
             moth_caught += 1
@@ -255,6 +310,7 @@ while running:
             if story_timer == 0:
                 story_timer = time.time()
             if time.time() - story_timer > 2:  # Wait 2 seconds before transitioning
+                sounds["transition"].play()
                 current_state = SECOND_LEVEL
                 story_timer = 0
 
@@ -270,7 +326,7 @@ while running:
 
     elif current_state == SHOWING_secondSTORY:
         display_second_story()
-        if secondStory_TxtImg_Y >= 20:  # Ensure the player has seen the second story
+        if secondStory_alpha >= 255:  # Ensure the player has seen the second story
             if story_timer == 0:
                 story_timer = time.time()
             if time.time() - story_timer > 2:  # Wait 2 seconds before transitioning
@@ -278,25 +334,34 @@ while running:
                 story_timer = 0  # Reset timer
 
     elif current_state == WINNING_NOTIF:
-        if story_timer == 0:
-            story_timer = time.time()
-        if time.time() - story_timer < 3:
-            screen.blit(first_level_img, (-50, -250))  # Show first level background
+        if notif_timer == 0:
+            sounds["win"].play()
+            notif_timer = time.time()
+        if time.time() - notif_timer < 3:
+            # Show first level background
+            screen.blit(first_level_img, (-50, -250))
             show_win()
         else:
             current_state = SHOWING_secondSTORY
+            notif_timer = 0
 
     elif current_state == LOSING_NOTIF:
-        if story_timer == 0:
-            story_timer = time.time()
-        if time.time() - story_timer < 3:
-            screen.blit(first_level_img, (-50, -250))  # Show first level background
+        if notif_timer == 0:
+            sounds["lose"].play()
+            notif_timer = time.time()
+        if time.time() - notif_timer < 3:
+            # Show first level background
+            screen.blit(first_level_img, (-50, -250))
             show_lose()
         else:
             current_state = INTRO
             debug_chance = 5
             moth_caught = 0
             manipulated_count = 0
+            story_timer = 0
+            reset = True
+            intro_timer = 0
+            notif_timer = 0
 
     pygame.display.update()
 
